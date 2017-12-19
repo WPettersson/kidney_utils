@@ -107,6 +107,8 @@ class Graph(object):
     def calculate_shortest_paths(self):
         """For each pair of distinct vertices u and v, calculate the shortest
         path between u and v."""
+        if self._shortest_paths:
+            return
         size = len(self._vertices)
         self._shortest_paths = [[[] for x in range(size)] for x in range(size)]
         for destination in self._vertices.values():
@@ -170,6 +172,50 @@ class Graph(object):
         if not self._eccentricity:
             self.calculate_eccentricity()
         return min(self._eccentricity)
+
+    def hop_plot(self):
+        """Calculate how much of the graph can be reached in a given number of
+        hops. The returned values are the average of the reach for each
+        individual vertex.
+        :return: A list of tuples (a, b) where a is the number of hops,
+        and b is the proportion of the graph that can be reached in that many
+        hops.
+        """
+        per_vertex = self.hop_plot_vertices()
+        # Make sure the list corresponding to each vertex is the same length
+        longest = max([len(x) for x in per_vertex])
+        results = [0] * longest
+        for vert in per_vertex:
+            for (distance, proportion) in vert:
+                results[distance-1] += proportion
+            for dist in range(len(vert), longest):
+                results[dist] += 1.0
+        results = [result/len(self._vertices) for result in results]
+        return results
+
+    def hop_plot_vertices(self):
+        """Calculate how much of the graph can be reached in a given number of
+        hops, for each vertex.
+
+        :return: A list of list of tuples. One list of tuples is returned for
+        each vertex. The list contains tuples (a, b) where a is the number of
+        hops and b is the proportion of the graph that can be reached from this
+        vertex in a hops.
+        """
+        results = []
+        num_verts = len(self._vertices)
+        self.calculate_shortest_paths()
+        for vert in self._vertices:
+            verts_done = 0
+            distance = 1
+            result_here = []
+            paths = self._shortest_paths[vert]
+            while verts_done < num_verts:
+                verts_done += len([x for x in paths if len(x) == distance])
+                result_here.append((distance, float(verts_done)/num_verts))
+                distance += 1
+            results.append(result_here)
+        return results
 
     def __str__(self):
         return "Graph on %d nodes" % len(self._vertices)
