@@ -5,6 +5,9 @@ try:
 except ImportError:
     from Queue import Queue
 
+import community
+import networkx
+from progressbar import ProgressBar, Bar, Percentage
 
 class Vertex(object):
     """A vertex in a directed graph."""
@@ -83,9 +86,10 @@ class Graph(object):
     def __init__(self):
         self._edges = []
         self._vertices = {}
-        self._snap_graph = snap.TNGraph.New()
+        self._vertices_list = []
         self._eccentricity = None
         self._shortest_paths = None
+        self._nxgraph = networkx.Graph()
 
     def add_edge(self, vert_1, vert_2, weight=1):
         """Add an edge from vert_1 to vert_2 with weight."""
@@ -102,21 +106,34 @@ class Graph(object):
         self._edges.append(edge)
         self._vertices[vert_1].add_out_edge(edge)
         self._vertices[vert_2].add_in_edge(edge)
-        self._snap_graph.AddEdge(vert_1, vert_2)
+        if weight != 1:
+            self._nxgraph.add_edge(vert_1, vert_2, weight=weight)
+        else:
+            self._nxgraph.add_edge(vert_1, vert_2)
 
     def vertex(self, index):
         """Get a Vertex from an index."""
         return self._vertices[index]
 
-    def calculate_shortest_paths(self):
+    def calculate_shortest_paths(self, quiet=True):
         """For each pair of distinct vertices u and v, calculate the shortest
         path between u and v."""
         if self._shortest_paths:
             return
         size = len(self._vertices)
-        self._shortest_paths = [[[] for x in range(size)] for x in range(size)]
+        self._shortest_paths = [[[] for _ in range(size)] for __ in range(size)]
+        count = len(self._vertices)
+        if not quiet:
+            pbar = ProgressBar(widgets=[Bar(), Percentage()], maxval=count)
+            pbar.start()
+            count = 0
         for destination in self._vertices.values():
             self.calculate_shortest_paths_to(destination)
+            if not quiet:
+                count += 1
+                pbar.update(count)
+        if not quiet:
+            pbar.finish()
 
     def calculate_shortest_paths_to(self, dest):
         """Calculate all shortest paths to dest."""
@@ -220,6 +237,28 @@ class Graph(object):
                 distance += 1
             results.append(result_here)
         return results
+
+    def best_partition(self):
+        """Get the best possible partition of this graph into clusters. Uses
+        the louvain method described in Fast unfolding of communities in large
+        networks, Vincent D Blondel, Jean-Loup Guillaume, Renaud Lambiotte,
+        Renaud Lefebvre, Journal of Statistical Mechanics: Theory and
+        Experiment 2008(10), P10008 (12pp) and the python package from
+        https://github.com/taynaud/python-louvain/
+        """
+        return community.best_partition(self._nxgraph)
+
+    def adjacency(self):
+        """Return the adjacency matrix of this graph."""
+        matrix = []
+        for _, vert in self._vertices.items():
+            here = [0.] * len(self._vertices)
+            for edge in vert.edges_out():
+                here[edge.tail().index()] += edge.weight()
+            for edge in vert.edges_in():
+                here[edge.head().index()] += edge.weight()
+            matrix.append(here)
+        return matrix
 
     def __str__(self):
         return "Graph on %d nodes" % len(self._vertices)
