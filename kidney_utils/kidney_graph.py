@@ -1,18 +1,18 @@
 """A directed graph representing kidney patients and donors."""
 
-from Queue import Queue
-import snap
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
 
 class Vertex(object):
     """A vertex in a directed graph."""
-    def __init__(self, index):
-        if not type(index) is int:
-            raise TypeError()
-        self._name = "V%d" % index
-        self._index = index
+    def __init__(self, desc, index):
+        self._name = "V_%s" % desc
         self._leaving = []
         self._entering = []
+        self._index = index
 
     def add_out_edge(self, edge):
         """Add an edge leaving this vertex."""
@@ -30,6 +30,10 @@ class Vertex(object):
         """The edges that leave this vertex."""
         return self._leaving
 
+    def index(self):
+        """The (integer) index of this vertex in the graph."""
+        return self._index
+
     def neighbours_out(self):
         """Return the list of neighbours when leaving this vertex."""
         return [edge.tail() for edge in self.edges_out()]
@@ -37,10 +41,6 @@ class Vertex(object):
     def neighbours_in(self):
         """Return the list of neighbours which entering this vertex."""
         return [edge.head() for edge in self.edges_in()]
-
-    def index(self):
-        """The (integer) index of this vertex"""
-        return self._index
 
     def __str__(self):
         return self._name
@@ -63,6 +63,10 @@ class Edge(object):
     def tail(self):
         """The end of the edge."""
         return self._v2
+
+    def weight(self):
+        """The weight of the edge."""
+        return self._weight
 
     def __str__(self):
         name = "%s->%s" % (self._v1, self._v2)
@@ -89,11 +93,11 @@ class Graph(object):
         self._eccentricity = None
         self._shortest_paths = None
         if vert_1 not in self._vertices:
-            self._vertices[vert_1] = Vertex(vert_1)
-            self._snap_graph.AddNode(vert_1)
+            self._vertices[vert_1] = Vertex(vert_1, len(self._vertices_list))
+            self._vertices_list.append(self._vertices[vert_1])
         if vert_2 not in self._vertices:
-            self._vertices[vert_2] = Vertex(vert_2)
-            self._snap_graph.AddNode(vert_2)
+            self._vertices[vert_2] = Vertex(vert_2, len(self._vertices_list))
+            self._vertices_list.append(self._vertices[vert_2])
         edge = Edge(self._vertices[vert_1], self._vertices[vert_2], weight)
         self._edges.append(edge)
         self._vertices[vert_1].add_out_edge(edge)
@@ -151,15 +155,13 @@ class Graph(object):
 
     def out_degree_dist(self):
         """Get the out-degree distribution of the graph"""
-        snap_results = snap.TIntPrV()
-        snap.GetOutDegCnt(self._snap_graph, snap_results)
-        return [[x.GetVal1(), x.GetVal2()] for x in snap_results]
+        #TODO
+        pass
 
     def in_degree_dist(self):
         """Get the in-degree distribution of the graph"""
-        snap_results = snap.TIntPrV()
-        snap.GetInDegCnt(self._snap_graph, snap_results)
-        return [[x.GetVal1(), x.GetVal2()] for x in snap_results]
+        #TODO
+        pass
 
     def diameter(self):
         """Get the diameter of the graph"""
@@ -167,10 +169,12 @@ class Graph(object):
             self.calculate_eccentricity()
         return max(self._eccentricity)
 
-    def radius(self):
+    def radius(self, ignore_loops=True):
         """Get the radius of the graph"""
         if not self._eccentricity:
             self.calculate_eccentricity()
+        if ignore_loops:
+            return min([dist for dist in self._eccentricity if dist != 0])
         return min(self._eccentricity)
 
     def hop_plot(self):
