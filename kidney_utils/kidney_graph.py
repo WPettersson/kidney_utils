@@ -260,5 +260,18 @@ class Graph(object):
             matrix.append(here)
         return matrix
 
+    def backarc(self):
+        """Return the proportion of edges that have a back-arc.
+        Note that a value of 1 indicates that every edge has a back-arc.
+        """
+        count = 0
+        edges = []
+        for edge in self._edges:
+            here = [edge.head(), edge.tail()]
+            edges.append(here)
+            if [edge.tail(), edge.head()] in edges:
+                count += 1
+        return (count / 2) / len(self._edges)
+
     def __str__(self):
         return "Graph on %d nodes" % len(self._vertices)
