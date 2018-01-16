@@ -1,7 +1,7 @@
 """Utilities to read and inspect files containing kidney exchange data."""
 
-from defusedxml import ElementTree as ET
 import json
+from defusedxml import ElementTree as ET
 from .kidney_graph import Graph
 
 
@@ -38,7 +38,7 @@ def read_xml_instance(filename):
         else:
             sources = list(sources)
             if len(sources) != 1:
-                raise ReadException()
+                raise ReadException("Only donors with exactly 1 source are supported")
             source = sources[0].text
         matches = donor.find("matches")
         if matches:
@@ -64,7 +64,7 @@ def read_json(filename):
                 graph.add_edge(source, target, score)
         else:
             if len(donor["sources"]) != 1:
-                raise ReadException()
+                raise ReadException("Only donors with exactly 1 source are supported")
             source = donor["sources"][0]
             for match in donor["matches"]:
                 target = match["recipient"]
