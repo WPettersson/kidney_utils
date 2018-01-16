@@ -3,7 +3,7 @@
 import json
 from defusedxml import ElementTree as ET
 from .kidney_graph import Graph
-
+from .solutions import Solution
 
 class ReadException(Exception):
     """An error occurred when reading a file."""
@@ -22,6 +22,19 @@ def read_instance(filename):
         return read_json(filename)
     if filename[-4:] == ".xml":
         return read_xml_instance(filename)
+    raise ReadException("Unknown file format")
+
+def read_solution(filename):
+    """Reads a solution from a file.
+
+    :param filename: The file containing the solution. It must end in either
+    .json or TODO, depending on the input format.
+    :returns solution: The Solution
+    :raises ReadException: Raised if the input file is not recognised or
+    malformed.
+    """
+    if filename[-4:] == ".xml":
+        return read_xml_solution(filename)
     raise ReadException("Unknown file format")
 
 def read_xml_instance(filename):
@@ -71,3 +84,45 @@ def read_json(filename):
                 score = float(match["score"])
                 graph.add_edge(source, target, score)
     return graph
+
+def read_xml_solution(filename):
+    """Reads a solution from a file.
+
+    :param filename: The file containing the solution.
+    :returns solution: The Solution
+    :raises ReadException: Raised if the input file is malformed.
+    """
+    xml_data = ET.parse(filename)
+    root = xml_data.getroot()#['data']
+    solution = Solution()
+    def get_xml_text(element):
+        """Get the text within an element"""
+        return "".join([x for x in element.itertext()])
+    output = root.find("output")
+    cycles = {}
+    for cycle in output.find("cycles"):
+        cycle_id = int(cycle.get('id'))
+        weight = float(cycle.get('weight'))
+        backarc = bool(cycle.get('backarcs', 0))
+        altruistic = bool(cycle.get('altruistic', None))
+        pairs = []
+        for pair in cycle.findall('pair'):
+            try:
+                patient = int(get_xml_text(pair.find("p")))
+            except AttributeError:
+                # Altruistic, no "first" patient
+                patient = -1
+            donor = int(get_xml_text(pair.find("d")))
+            pairs.append((donor, patient))
+        cycles[cycle_id] = (weight, backarc, altruistic, pairs)
+    sol = output.find('exchange_data').find('entry')
+    solution.set_description(get_xml_text(sol.find('description')))
+    for cycle in sol.find('exchanges'):
+        cycle_id = int(get_xml_text(cycle))
+        (weight, backarc, altruistic, pairs) = cycles[cycle_id]
+        if altruistic:
+            solution.add_chain(chain_id=cycle_id, pairs=pairs)
+        else:
+            solution.add_cycle(cycle_id=cycle_id, pairs=pairs, weight=weight,
+                               backarc=backarc)
+    return solution
