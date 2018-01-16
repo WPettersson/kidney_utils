@@ -9,8 +9,22 @@ class ReadException(Exception):
     """An error occurred when reading a file."""
     pass
 
+def read_instance(filename):
+    """Read an instance of a kidney exchange problem.
 
-def read_xml(filename):
+    :param filename: The file containing the instance. It must end in either
+    .json or .xml, depending on the input format.
+    :returns graph: The Graph object which represents this instance.
+    :raises ReadException: Raised if the input file is not recognised or
+    malformed.
+    """
+    if filename[-5:] == ".json":
+        return read_json(filename)
+    if filename[-4:] == ".xml":
+        return read_xml_instance(filename)
+    raise ReadException("Unknown file format")
+
+def read_xml_instance(filename):
     """Read an XML file containing kidney exchange data.
     """
     xml_data = ET.parse(filename)
