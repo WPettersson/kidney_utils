@@ -91,6 +91,10 @@ class Graph(object):
         self._shortest_paths = None
         self._nxgraph = networkx.Graph()
 
+    def size(self):
+        """Size, aka number of vertices."""
+        return len(self._vertices)
+
     def add_edge(self, vert_1, vert_2, weight=1):
         """Add an edge from vert_1 to vert_2 with weight."""
         # Mark eccentricity and shortest-paths as not known
@@ -226,11 +230,11 @@ class Graph(object):
         results = []
         num_verts = len(self._vertices)
         self.calculate_shortest_paths()
-        for vert in self._vertices:
+        for index, vert in enumerate(self._vertices):
             verts_done = 0
             distance = 1
             result_here = []
-            paths = self._shortest_paths[vert]
+            paths = self._shortest_paths[index]
             while verts_done < num_verts:
                 verts_done += len([x for x in paths if len(x) == distance])
                 result_here.append((distance, float(verts_done)/num_verts))
