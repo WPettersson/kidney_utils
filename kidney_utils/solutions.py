@@ -27,7 +27,7 @@ class Cycle(Exchange):
         self._backarc = backarc
 
     def backarc(self):
-        """Does this cycle have a backarc"""
+        """How many backarcs does this cycle?"""
         return self._backarc
 
 class Chain(Exchange):
@@ -35,7 +35,7 @@ class Chain(Exchange):
 
     def __len__(self):
         # The last pair is just a recipient, not donating
-        return super().__len__() - 1
+        return super().__len__()
 
 class Solution(object):
     """A set of kidney exchanges, as well as some metadata.
@@ -104,6 +104,13 @@ class Solution(object):
         """
         return self._n_way(2)
 
+    def three_ways_with_backarcs(self):
+        """Return a list of three-way exchanges with back-arcs.
+
+        :return: A list of Cycle objects.
+        """
+        return [x for x in self.three_ways() if x.backarc() > 0]
+
     def _n_chains(self, length):
         """Return a list of chains of length n."""
         return [x for x in self._chains.values() if len(x) == length]
@@ -130,7 +137,7 @@ class Solution(object):
         string = str(self._desc) + "\n"
         string += "%d total transplants\n" % self.size()
         string += "%d two-way exchanges\n" % len(self.two_ways())
-        string += "%d three-way exchanges\n" % len(self.three_ways())
+        string += "%d three-way exchanges (%d with back arcs)\n" % (len(self.three_ways()), len(self.three_ways_with_backarcs()))
         string += "%d short chains\n" % len(self.short_chains())
         string += "%d long chains\n" % len(self.long_chains())
         return string

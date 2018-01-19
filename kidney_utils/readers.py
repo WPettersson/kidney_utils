@@ -19,7 +19,7 @@ def read_instance(filename):
     malformed.
     """
     if filename[-5:] == ".json":
-        return read_json(filename)
+        return read_json_instance(filename)
     if filename[-4:] == ".xml":
         return read_xml_instance(filename)
     raise ReadException("Unknown file format")
@@ -62,7 +62,7 @@ def read_xml_instance(filename):
     return graph
 
 
-def read_json(filename):
+def read_json_instance(filename):
     """Read a JSON file containing kidney exchange data.
     """
     with open(filename, "r") as infile:
@@ -100,10 +100,10 @@ def read_xml_solution(filename):
         return "".join([x for x in element.itertext()])
     output = root.find("output")
     cycles = {}
-    for cycle in output.find("cycles"):
+    for cycle in output.find("all_cycles"):
         cycle_id = int(cycle.get('id'))
         weight = float(cycle.get('weight'))
-        backarc = bool(cycle.get('backarcs', 0))
+        backarc = int(cycle.get('backarcs', 0))
         altruistic = bool(cycle.get('altruistic', None))
         pairs = []
         for pair in cycle.findall('pair'):
