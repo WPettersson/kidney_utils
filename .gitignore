@@ -2,3 +2,5 @@ __pycache__
 *.pyc
 build
 .coverage
+dist
+kidney_utils.egg-info
