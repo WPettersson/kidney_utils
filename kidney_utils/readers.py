@@ -2,7 +2,7 @@
 
 import json
 from defusedxml import ElementTree as ET
-from .kidney_graph import Graph
+from .graph import Graph
 from .solutions import Solution
 
 class ReadException(Exception):
