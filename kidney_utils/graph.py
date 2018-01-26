@@ -12,10 +12,16 @@ from progressbar import ProgressBar, Bar, Percentage
 class Vertex(object):
     """A vertex in a directed graph."""
     def __init__(self, desc, index):
-        self._name = "V_%s" % desc
+        self._desc = desc
         self._leaving = []
         self._entering = []
         self._index = index
+
+    def desc(self):
+        """Return a description of this vertex. This is the key used by the
+        graph to refer to this vertex.
+        """
+        return self._desc
 
     def add_out_edge(self, edge):
         """Add an edge leaving this vertex."""
@@ -39,14 +45,20 @@ class Vertex(object):
 
     def neighbours_out(self):
         """Return the list of neighbours when leaving this vertex."""
-        return [edge.tail() for edge in self.edges_out()]
+        return [edge.head() for edge in self.edges_out()]
 
     def neighbours_in(self):
         """Return the list of neighbours which entering this vertex."""
-        return [edge.head() for edge in self.edges_in()]
+        return [edge.tail() for edge in self.edges_in()]
+
+    def all_neighbours(self):
+        """Return all neighbours, for instance if treating this directed graph
+        as an undirected graph.
+        """
+        return self.neighbours_in() + self.neighbours_out()
 
     def __str__(self):
-        return self._name
+        return "V%s" % (self._desc)
 
     def __repr__(self):
         return self.__str__()
@@ -59,11 +71,11 @@ class Edge(object):
         self._v2 = v2
         self._weight = weight
 
-    def head(self):
+    def tail(self):
         """The start of the edge."""
         return self._v1
 
-    def tail(self):
+    def head(self):
         """The end of the edge."""
         return self._v2
 
@@ -95,17 +107,19 @@ class Graph(object):
         """Size, aka number of vertices."""
         return len(self._vertices)
 
+    def add_vertex(self, vert):
+        """Add a vertex to the graph."""
+        if vert not in self._vertices.keys():
+            self._vertices[vert] = Vertex(vert, len(self._vertices_list))
+            self._vertices_list.append(self._vertices[vert])
+
     def add_edge(self, vert_1, vert_2, weight=1):
         """Add an edge from vert_1 to vert_2 with weight."""
         # Mark eccentricity and shortest-paths as not known
         self._eccentricity = None
         self._shortest_paths = None
-        if vert_1 not in self._vertices:
-            self._vertices[vert_1] = Vertex(vert_1, len(self._vertices_list))
-            self._vertices_list.append(self._vertices[vert_1])
-        if vert_2 not in self._vertices:
-            self._vertices[vert_2] = Vertex(vert_2, len(self._vertices_list))
-            self._vertices_list.append(self._vertices[vert_2])
+        self.add_vertex(vert_1)
+        self.add_vertex(vert_2)
         edge = Edge(self._vertices[vert_1], self._vertices[vert_2], weight)
         self._edges.append(edge)
         self._vertices[vert_1].add_out_edge(edge)
@@ -118,6 +132,18 @@ class Graph(object):
     def vertex(self, index):
         """Get a Vertex from an index."""
         return self._vertices[index]
+
+    def vertex_list(self):
+        """The list of Vertex objects in this graph"""
+        return self._vertices_list
+
+    def edge_count(self):
+        """Number of edges in the graph."""
+        return len(self._edges)
+
+    def edge_list(self):
+        """List of Edge objects in this graph"""
+        return self._edges
 
     def calculate_shortest_paths(self, quiet=True):
         """For each pair of distinct vertices u and v, calculate the shortest
@@ -258,9 +284,9 @@ class Graph(object):
         for _, vert in self._vertices.items():
             here = [0.] * len(self._vertices)
             for edge in vert.edges_out():
-                here[edge.tail().index()] += edge.weight()
-            for edge in vert.edges_in():
                 here[edge.head().index()] += edge.weight()
+            for edge in vert.edges_in():
+                here[edge.tail().index()] += edge.weight()
             matrix.append(here)
         return matrix
 
@@ -271,11 +297,65 @@ class Graph(object):
         count = 0
         edges = []
         for edge in self._edges:
-            here = [edge.head(), edge.tail()]
+            here = [edge.tail(), edge.head()]
             edges.append(here)
-            if [edge.tail(), edge.head()] in edges:
+            if [edge.head(), edge.tail()] in edges:
                 count += 1
         return (count / 2) / len(self._edges)
+
+    def approx_treewidth(self):
+        """Computes an approximation of the treewidth of this graph, using the
+        Greedy Fill-In algorithm.
+        """
+        decomp = Graph()
+        # Make decomp a copy of self. We modify this to find the treewidth.
+        # Then we throw it away, even though it's almost a complete tree
+        # decomposition, because I don't yet need that bit.
+        for edge in self._edges:
+            decomp.add_edge(edge.tail().desc(), edge.head().desc(), edge.weight())
+        for vert in self.vertex_list():
+            decomp.add_vertex(vert.desc())
+        used = [False] * decomp.size()
+        width = 0
+        def next_vert():
+            """Get the next vertex to add to a bag, according to Greedy Fill-In
+            """
+            least_added = -1
+            to_return = None
+            for vert in decomp.vertex_list():
+                if used[vert.index()]:
+                    continue
+                num_added = 0
+                bag_size = 1
+                neighbours = vert.all_neighbours()
+                for vert_a in neighbours:
+                    if used[vert_a.index()]:
+                        continue
+                    bag_size += 1
+                    for vert_b in neighbours:
+                        if used[vert_b.index()] or vert_b in vert_a.all_neighbours():
+                            continue
+                        num_added += 1
+                if least_added == -1 or num_added < least_added:
+                    least_added = num_added
+                    to_return = vert
+                    this_bag_size = bag_size
+            return to_return, this_bag_size
+        for _ in range(self.size()):
+            best_choice, bag_size = next_vert()
+            if bag_size > width + 1:
+                width = bag_size - 1
+            used[best_choice.index()] = True
+            for vert in decomp.vertex_list():
+                if not used[vert.index()] and vert in best_choice.all_neighbours():
+                    for other in decomp.vertex_list():
+                        if vert == other:
+                            continue
+                        if used[other.index()] or other not in best_choice.all_neighbours():
+                            continue
+                        if other not in vert.all_neighbours():
+                            decomp.add_edge(vert.desc(), other.desc())
+        return width
 
     def __str__(self):
         return "Graph on %d nodes" % len(self._vertices)
