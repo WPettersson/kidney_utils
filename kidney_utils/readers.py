@@ -2,7 +2,7 @@
 
 import json
 from defusedxml import ElementTree as ET
-from .graph import Graph
+from .instance import Instance
 from .solutions import Solution
 
 class ReadException(Exception):
@@ -21,7 +21,10 @@ def read_instance(filename):
     if filename[-5:] == ".json":
         return read_json_instance(filename)
     if filename[-4:] == ".xml":
-        return read_xml_instance(filename)
+        try:
+            return read_xml_instance(filename)
+        except AttributeError:
+            raise ReadException("XML file is not an instance.")
     raise ReadException("Unknown file format")
 
 def read_solution(filename):
@@ -34,7 +37,10 @@ def read_solution(filename):
     malformed.
     """
     if filename[-4:] == ".xml":
-        return read_xml_solution(filename)
+        try:
+            return read_xml_solution(filename)
+        except AttributeError:
+            raise ReadException("XML file is not a solution.")
     raise ReadException("Unknown file format")
 
 def read_xml_instance(filename):
@@ -42,7 +48,7 @@ def read_xml_instance(filename):
     """
     xml_data = ET.parse(filename)
     donors = xml_data.getroot()#['data']
-    graph = Graph()
+    instance = Instance()
     for donor in donors:
         sources = donor.find("sources")
         if not sources:
@@ -58,8 +64,8 @@ def read_xml_instance(filename):
             for match in matches:
                 target = match.find("recipient").text
                 score = float(match.find("score").text)
-                graph.add_edge(source, target, score)
-    return graph
+                instance.add_edge(source, target, score)
+    return instance
 
 
 def read_json_instance(filename):
@@ -67,14 +73,14 @@ def read_json_instance(filename):
     """
     with open(filename, "r") as infile:
         json_data = json.load(infile)
-    graph = Graph()
+    instance = Instance()
     for index, donor in json_data["data"].items():
         if "altruistic" in donor:
             source = "alt_%s" % (index)
             for match in donor["matches"]:
                 target = match["recipient"]
                 score = float(match["score"])
-                graph.add_edge(source, target, score)
+                instance.add_edge(source, target, score)
         else:
             if len(donor["sources"]) != 1:
                 raise ReadException("Only donors with exactly 1 source are supported")
@@ -82,8 +88,8 @@ def read_json_instance(filename):
             for match in donor["matches"]:
                 target = match["recipient"]
                 score = float(match["score"])
-                graph.add_edge(source, target, score)
-    return graph
+                instance.add_edge(source, target, score)
+    return instance
 
 def read_xml_solution(filename):
     """Reads a solution from a file.
