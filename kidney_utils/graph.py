@@ -101,7 +101,7 @@ class Graph(object):
         self._vertices_list = []
         self._eccentricity = None
         self._shortest_paths = None
-        self._nxgraph = networkx.Graph()
+        self._nxgraph = networkx.DiGraph()
 
     def size(self):
         """Size, aka number of vertices."""
@@ -185,6 +185,54 @@ class Graph(object):
             for to_do in source.neighbours_in():
                 to_check.put((to_do, source))
 
+    def strongly_connected_components(self):
+        """Find the strongly connected components (SCC) of this graph.
+        This uses Tarjan's algorithm (Depth-first search and linear graph
+        algorithms, R. E. Tarjan, SIAM Journal on Computing, 1972), although
+        the Wikipedia article is also good reading in this case.
+
+        :return: A list of lists. Each inner list is a set of vertices which
+        are strongly connected in this graph.
+        """
+        components = []
+        # Lazily using a list as a stack. Just use append/pop to access.
+        stack = list()
+
+        depth = 0
+        def strong_connect(vert):
+            """Find the strongly connected component this vertex belongs to.
+            """
+            nonlocal depth
+            vert.scc_index = depth
+            vert.scc_low_link = depth
+            depth += 1
+            vert.scc_on_stack = True
+            stack.append(vert)
+
+            for outgoing in vert.neighbours_out():
+                if not hasattr(outgoing, "scc_index"):
+                    strong_connect(outgoing)
+                    vert.scc_low_link = min(vert.scc_low_link,
+                                            outgoing.scc_low_link)
+                elif outgoing.scc_on_stack:
+                    vert.scc_low_link = min(vert.scc_low_link,
+                                            outgoing.scc_low_link)
+            if vert.scc_low_link == vert.scc_index:
+                # Is a "root" of a SCC
+                component = []
+                while True:
+                    adding = stack.pop()
+                    adding.scc_on_stack = False
+                    component.append(adding)
+                    if adding is vert:
+                        break
+                components.append(component)
+
+        for vert in self._vertices.values():
+            if not hasattr(vert, "scc_index"):
+                strong_connect(vert)
+        return components
+
     def calculate_eccentricity(self):
         """Calculate the eccentricity of each vertex. For a vertex v, this is
         the maximum of shortest_path(v,u) over all other vertices u."""
@@ -209,6 +257,48 @@ class Graph(object):
         """Get the in-degree distribution of the graph"""
         #TODO
         pass
+
+    def find_cycles(self):
+        """Find all simple directed graphs."""
+        cycles = list(networkx.algorithms.cycles.simple_cycles(self._nxgraph))
+        return cycles
+
+    def relevant_subsets(self, maxcycle, maxsize=None):
+        """Finds all relevant subsets, as defined on page 6 of Maximising
+        expectation of the number of transplants in kidny exchange programs.
+        """
+        if maxsize is None:
+            maxsize = len(self._vertices)
+        cycles = list(self.find_cycles())
+        cycles = [c for c in cycles if len(c) <= maxcycle]
+        omega = list()
+        for cycle in cycles:
+            subset = set()
+            for vert in cycle:
+                subset.add(vert)
+            omega.append(subset)
+        def _recurse(omega, verts, c_bar, maxcycle, maxsize):
+            for cycle in c_bar:
+                s_dash = set(verts)
+                for vert in cycle:
+                    s_dash.add(vert)
+                if len(s_dash) > maxsize + maxcycle:
+                    continue
+                if not [x for x in cycle if x in verts]:
+                    continue
+                if s_dash not in omega:
+                    omega.append(s_dash)
+                if len(s_dash) < maxsize + maxcycle:
+                    c_hat = [c for c in c_bar if [v for v in c if v not in cycle]]
+                    omega = _recurse(omega, s_dash, c_hat, maxcycle, maxsize)
+            return omega
+        for cycle in cycles:
+            verts = set(cycle)
+            c_bar = [c for c in cycles if [v for v in c if v not in cycle]]
+            if len(verts) < maxsize + maxcycle:
+                omega = _recurse(omega, verts, c_bar, maxcycle, maxsize)
+        return omega
+
 
     def diameter(self):
         """Get the diameter of the graph"""

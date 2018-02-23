@@ -7,14 +7,16 @@ from nose.tools import eq_
 def test_treewidth_complete_graphs():
     """Test treewidth algorithm, which is approximate and not exact.
     """
-    def test_kn(n):
+
+    def test_kn(size):
+        """Test on complete graphs."""
         graph = Graph()
-        for one in range(n):
-            for two in range(one + 1, n):
+        for one in range(size):
+            for two in range(one + 1, size):
                 graph.add_edge(one, two)
-        eq_(n-1, graph.approx_treewidth())
-    for n in range(2, 6):
-        test_kn(n)
+        eq_(size-1, graph.approx_treewidth())
+    for size in range(2, 6):
+        test_kn(size)
 
 
 def test_treewidth():
@@ -29,3 +31,31 @@ def test_treewidth():
                      (5, 8), (6, 7), (6, 8), (7, 8)]:
         graph.add_edge(one, two)
     eq_(3, graph.approx_treewidth())
+
+def test_strong_connected_component():
+    """Test the strongly connected components implementation.
+    """
+    graph = Graph()
+    for one, two in [(1, 2), (2, 3), (3, 1)]:
+        graph.add_edge(one, two)
+    scc = graph.strongly_connected_components()
+    eq_(1, len(scc))
+    eq_(3, len(scc[0]))
+
+    graph = Graph()
+    for one, two in [(1, 2), (2, 3), (3, 4), (4, 3)]:
+        graph.add_edge(one, two)
+    scc = graph.strongly_connected_components()
+    eq_(3, len(scc))
+    # Tarjan's is deterministic, so we should be able to ignore the ordering
+    # here, but if this test fails, check the order of the lengths
+    eq_([2, 1, 1], [len(c) for c in scc])
+
+def test_cycles():
+    """Test the enumeration of simple cycle finding in directed graphs."""
+    graph = Graph()
+    for one, two in [(1, 2), (2, 3), (3, 1)]:
+        graph.add_edge(one, two)
+    cycles = list(graph.find_cycles())
+    eq_(len(cycles), 1)
+    eq_(cycles[0], [1, 2, 3])
