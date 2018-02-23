@@ -1,0 +1,6 @@
+nose
+rednose
+networkx
+defusedxml
+progressbar33
+python-louvain
