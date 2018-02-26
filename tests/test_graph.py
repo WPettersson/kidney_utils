@@ -59,3 +59,11 @@ def test_cycles():
     cycles = list(graph.find_cycles())
     eq_(len(cycles), 1)
     eq_(cycles[0], [1, 2, 3])
+
+def test_groups():
+    """Test the detection of similar groups of vertices."""
+    graph = Graph()
+    for one, two in [(1, 2), (2, 3), (1, 4), (4, 3), (3, 1)]:
+        graph.add_edge(one, two)
+    groups = graph.group()
+    eq_(len(groups), 3)

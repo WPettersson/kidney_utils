@@ -57,6 +57,9 @@ class Vertex(object):
         """
         return self.neighbours_in() + self.neighbours_out()
 
+    def __lt__(self, other):
+        return self.index() < other.index()
+
     def __str__(self):
         return "V%s" % (self._desc)
 
@@ -392,6 +395,30 @@ class Graph(object):
             if [edge.head(), edge.tail()] in edges:
                 count += 1
         return (count / 2) / len(self._edges)
+
+    def group(self):
+        """Return a grouping of the graph, where each group is a set of
+        vertices with the same edges going in and out.
+        """
+        # A group is a mapping from a tuple (edges_in, edges_out) to a list of
+        # vertices with these particular edge sets.
+        groups = {}
+        def listhash(verts):
+            """Create a string from a list, so we can hash it."""
+            return ",".join(str(vert) for vert in sorted(verts))
+        for vert in self._vertices_list:
+            added = False
+            for group, vertices in groups.items():
+                (neighbours_in, neighbours_out) = group
+                if (neighbours_in == listhash(vert.neighbours_in()) and
+                        neighbours_out == listhash(vert.neighbours_out())):
+                    vertices.append(vert)
+                    added = True
+                    break
+            if not added:
+                group = (listhash(vert.neighbours_in()), listhash(vert.neighbours_out()))
+                groups[group] = [vert]
+        return list(groups.values())
 
     def approx_treewidth(self):
         """Computes an approximation of the treewidth of this graph, using the
