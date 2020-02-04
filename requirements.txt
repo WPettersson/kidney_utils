@@ -4,3 +4,4 @@ networkx
 defusedxml
 progressbar33
 python-louvain
+numpy
