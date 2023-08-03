@@ -51,6 +51,8 @@ def read_xml_instance(filename):
     instance = Instance()
     for donor in donors:
         sources = donor.find("sources")
+        if "bloodgroup" in donor:
+            instance.set_bloodgroup(source, donor["bloodgroup"]["type"])
         if not sources:
             donor_id = donor.attrib["donor_id"]
             source = "alt_%s" % donor_id
@@ -77,6 +79,8 @@ def read_json_instance(filename):
     for index, donor in json_data["data"].items():
         if "altruistic" in donor:
             source = "alt_%s" % (index)
+            if "bloodgroup" in donor:
+                instance.set_bloodgroup(source, donor["bloodgroup"]["type"])
             for match in donor["matches"]:
                 target = match["recipient"]
                 score = float(match["score"])
@@ -85,6 +89,11 @@ def read_json_instance(filename):
             if len(donor["sources"]) != 1:
                 raise ReadException("Only donors with exactly 1 source are supported")
             source = donor["sources"][0]
+            if "bloodgroup" in donor:
+                instance.set_bloodgroup(source, donor["bloodgroup"]["type"])
+            if "matches" not in donor.keys():
+                # No matches for this donor
+                continue
             for match in donor["matches"]:
                 target = match["recipient"]
                 score = float(match["score"])

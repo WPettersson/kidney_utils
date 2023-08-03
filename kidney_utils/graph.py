@@ -16,6 +16,7 @@ class Vertex(object):
         self._leaving = []
         self._entering = []
         self._index = index
+        self._bloodgroup = None
 
     def desc(self):
         """Return a description of this vertex. This is the key used by the
@@ -56,6 +57,14 @@ class Vertex(object):
         as an undirected graph.
         """
         return self.neighbours_in() + self.neighbours_out()
+
+    @property
+    def bloodgroup(self):
+        return self._bloodgroup
+
+    @bloodgroup.setter
+    def bloodgroup(self, bloodgroup):
+        self._bloodgroup = bloodgroup
 
     def __lt__(self, other):
         return self.index() < other.index()
@@ -131,6 +140,11 @@ class Graph(object):
             self._nxgraph.add_edge(vert_1, vert_2, weight=weight)
         else:
             self._nxgraph.add_edge(vert_1, vert_2)
+
+    def set_bloodgroup(self, vert, bloodgroup):
+        """Set the bloodgroup for a donor"""
+        self.add_vertex(vert)
+        self._vertices[vert].bloodgroup = bloodgroup
 
     def vertex(self, index):
         """Get a Vertex from an index."""
