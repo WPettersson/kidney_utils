@@ -267,13 +267,23 @@ class Graph(object):
 
     def out_degree_dist(self):
         """Get the out-degree distribution of the graph"""
-        #TODO
-        pass
+        dist = {}
+        for vertex in self._vertices_list:
+            deg = len(vertex.edges_out())
+            if deg not in dist:
+                dist[deg] = 0
+            dist[deg] += 1
+        return dist
 
     def in_degree_dist(self):
         """Get the in-degree distribution of the graph"""
-        #TODO
-        pass
+        dist = {}
+        for vertex in self._vertices_list:
+            deg = len(vertex.edges_in())
+            if deg not in dist:
+                dist[deg] = 0
+            dist[deg] += 1
+        return dist
 
     def find_cycles(self):
         """Find all simple directed graphs."""
@@ -315,7 +325,6 @@ class Graph(object):
             if len(verts) < maxsize + maxcycle:
                 omega = _recurse(omega, verts, c_bar, maxcycle, maxsize)
         return omega
-
 
     def diameter(self):
         """Get the diameter of the graph"""
